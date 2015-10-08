@@ -8,6 +8,15 @@
   []
   (OnfivDiscovery/discoverOnvifDevices))
 
+(defn print-onvifpointer
+  "Prints all information within an OnvifPointer object"
+  [op]
+  (println "faddr?  " (.getAddress op))
+  (println "fname?  " (.getName op))
+  (println "fsnap?  " (.getSnapshotUrl op))
+  (println "fstr?   " (.toString op)))
+
+
 (defn -main
   "Discovers cameras using onvif."
   [& args]
@@ -15,9 +24,5 @@
     (println "is empty? " (.isEmpty found-cameras))
     (println "# items?  " (.size found-cameras))
     (if (> (.size found-cameras) 0)
-      (do
-        (println "faddr?  " (.getAddress (.get found-cameras 0)))
-        (println "fname?  " (.getName (.get found-cameras 0)))
-        (println "fsnap?  " (.getSnapshotUrl (.get found-cameras 0)))
-        (println "fstr?   " (.toString (.get found-cameras 0))))
+      (print-onvifpointer (.get found-cameras 0))
       (println "try again"))))
