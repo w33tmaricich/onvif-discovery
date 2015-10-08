@@ -21,5 +21,3 @@
         (println "fsnap?  " (.getSnapshotUrl (.get found-cameras 0)))
         (println "fstr?   " (.toString (.get found-cameras 0))))
       (println "try again"))))
-    ;(println (.getName (.get found-cameras 0)))))
-    ;(map #(.getName %) (.get found-cameras (inc 0)))))
