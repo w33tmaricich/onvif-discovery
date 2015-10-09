@@ -1,12 +1,8 @@
 (ns camera-detection.core
   (:import [de.onvif.discovery OnfivDiscovery OnvifPointer]
+           [org.me.javawsdiscovery DeviceDiscovery]
            [java.util List])
   (:gen-class))
-
-(defn discover-cameras
-  "Searches for cameras on the network and returns any that were found."
-  []
-  (OnfivDiscovery/discoverOnvifDevices))
 
 (defn print-onvifpointer
   "Prints all information within an OnvifPointer object"
@@ -16,13 +12,30 @@
   (println "fsnap?  " (.getSnapshotUrl op))
   (println "fstr?   " (.toString op)))
 
+(defn create-ip-list
+  "Converts a list of strings to a list of ip addresses"
+  [strings]
+  (into [] (map #(re-find #"\d+\.\d+\.\d+\.\d+" %) strings)))
 
 (defn -main
   "Discovers cameras using onvif."
   [& args]
-  (let [found-cameras (discover-cameras)]
-    (println "is empty? " (.isEmpty found-cameras))
-    (println "# items?  " (.size found-cameras))
-    (if (> (.size found-cameras) 0)
-      (print-onvifpointer (.get found-cameras 0))
-      (println "try again"))))
+  (let [found-camera-urls (DeviceDiscovery/discoverWsDevicesAsUrls)
+        found-cameras (into [] (DeviceDiscovery/discoverWsDevices))
+        camera-ips (create-ip-list found-cameras)]
+    (if (> (count found-camera-urls) 0)
+      (do
+        ; Do some debugging.
+        (println "found-camera-urls")
+        (println found-camera-urls)
+        (println)
+        (println "found-cameras")
+        (println found-cameras)
+        (println)
+        (println "ip addresses")
+        (println camera-ips))
+
+        ;Create onvif pointers to get more info.
+        ;(def pointer (OnvifPointer. (first found-camera-urls))))
+
+      (println "No onvif devices found."))))
