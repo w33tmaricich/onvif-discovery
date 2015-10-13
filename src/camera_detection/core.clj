@@ -38,7 +38,7 @@
     (do
       (println "| MediaDevices:" media-device)
       (println "| ===")
-    (println "No media devices."))))
+    (println "| No media devices."))))
 
 (defn create-ip-list
   "Converts a list of strings to a list of ip addresses"
@@ -78,7 +78,7 @@
     (loop [unchecked-ip-addresses ip-addresses
            valid-ip-addresses []]
       (if (empty? unchecked-ip-addresses)
-        (println "Valid:" valid-ip-addresses)
+        (println "...done.")
         (do
           (try
             (print-camera-info (first unchecked-ip-addresses))
