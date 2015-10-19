@@ -6,81 +6,53 @@
            [java.util List])
   (:gen-class))
 
-(defn print-onvifpointer
-  "Prints all information within an OnvifPointer object"
-  [op]
-  (println "faddr?  " (.getAddress op))
-  (println "fname?  " (.getName op))
-  (println "fsnap?  " (.getSnapshotUrl op))
-  (println "fstr?   " (.toString op)))
-
-(defn print-onvifdevice
-  "Prints key onvifdevice information."
+(defn device-info
+  "Creates a datastructure that contains device information"
   [onvif-device]
   (if (not (nil? onvif-device))
-    (do
-      (println "| OnvifDevice:" onvif-device)
-      (println "| ===")
-      (println "| Device is online.")
-      (println "| Username:" (.getUsername onvif-device))
-      (println "| Time:    " (.getUTCTime onvif-device))
-      (println "| Date:    " (.getDate onvif-device))
-      (println "| Soap:    " (.getSoap onvif-device))
-      (println "| Devices: " (.getXAddr (.getMedia (.getCapabilities (.getDevices onvif-device)))))
-      (println "| Main URI:" (.getDeviceUri onvif-device))
-      (println "| "))
-    (println "Device is onffline.")))
-
-(defn print-mediadevice
-  "Prints key mediadevice information."
-  [media-device]
-  (if (not (nil? media-device))
-    (do
-      (println "| MediaDevices:" media-device)
-      (println "| ===")
-    (println "| No media devices."))))
+    {:device onvif-device
+     :username (.getUsername onvif-device)
+     :time (.getUTCTime onvif-device)
+     :date (.getDate onvif-device)
+     :uri (.getDeviceUri onvif-device)}
+    nil))
 
 (defn create-ip-list
   "Converts a list of strings to a list of ip addresses"
   [strings]
   (into [] (map #(re-find #"\d+\.\d+\.\d+\.\d+" %) strings)))
 
-(defn discover-camera-ips
-  "Discovers cameras using onvif."
+(defn discover-camera-uris
+  "Retrieves IP addresses of discovered cameras."
   []
   (println "Searching for onvif devices...")
-  (let [found-cameras (into [] (DeviceDiscovery/discoverWsDevices))
-        camera-ips (create-ip-list found-cameras)]
+  (let [found-cameras (into [] (DeviceDiscovery/discoverWsDevices))]
     (if (> (count found-cameras) 0)
       (do
-        (println (count camera-ips) "devices found.\n")
-        camera-ips)
-      (println "No onvif devices found."))))
+        (println (count found-cameras) "devices found.\n")
+        found-cameras)
+      (do
+        (println "No onvif devices found.")
+        []))))
 
-(defn print-camera-info
+(defn discover-camera-ips
+  "Retrieves URI's of discovered cameras."
+  []
+  (create-ip-list (discover-camera-uris)))
+
+(defn camera-info
   "Retrieves information from a camera with a given ip."
   [ip]
-  (println)
-  (println "Getting" ip "info.")
-  (println "/---")
-  (let [device (OnvifDevice. ip)
-        i-device (InitialDevices. device)
-        media-device (MediaDevices. device)]
-    (print-onvifdevice device)
-    (print-mediadevice media-device))
-  (println "\\---")
-  (println))
+  (try
+    (let [device (OnvifDevice. ip)
+          i-device (InitialDevices. device)
+          media-device (MediaDevices. device)]
+      (device-info device))
+    (catch Exception e (println "failed"))))
 
 (defn -main
-  "Not much yet"
+  "Runs when the application boots."
   [& args]
-  (let [ip-addresses (discover-camera-ips)]
-    (loop [unchecked-ip-addresses ip-addresses
-           valid-ip-addresses []]
-      (if (empty? unchecked-ip-addresses)
-        (println "...done.")
-        (do
-          (try
-            (print-camera-info (first unchecked-ip-addresses))
-            (catch Exception e (println "...failed.\n")))
-          (recur (rest unchecked-ip-addresses) valid-ip-addresses))))))
+  (let [found-addresses (into [] (remove #{"172.28.12.120"} (discover-camera-ips))) ; Temporary ip removal. the device hangs the script. must be resolved.
+        found-info (into #{} (remove nil? (map camera-info found-addresses)))]
+    (println found-info)))
