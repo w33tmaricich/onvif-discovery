@@ -44,15 +44,23 @@
   "Retrieves information from a camera with a given ip."
   [ip]
   (try
-    (let [device (OnvifDevice. ip)
-          i-device (InitialDevices. device)
-          media-device (MediaDevices. device)]
+    (let [device (OnvifDevice. ip)]
       (device-info device))
-    (catch Exception e (println "failed"))))
+    (catch Exception e nil)))
 
-(defn -main
-  "Runs when the application boots."
+(defn -main-detailed
+  "Returns a small list of information about cameras in which communication was successful."
   [& args]
-  (let [found-addresses (into [] (remove #{"172.28.12.120"} (discover-camera-ips))) ; Temporary ip removal. the device hangs the script. must be resolved.
+  (let [found-addresses (into [] (discover-camera-ips)) ; Temporary ip removal. the device hangs the script. must be resolved.
         found-info (into #{} (remove nil? (map camera-info found-addresses)))]
     (println found-info)))
+
+(defn -main
+  "Returns a list of URIs of devices found on the network."
+  [& args]
+  (let [uris (discover-camera-uris)
+        found-data {:uris uris
+                    :ips (create-ip-list uris)}]
+                    ;:ips (create-ip-list uris)
+                    ;:deep (into #{} (remove nil? (map camera-info (create-ip-list uris))))}]
+    (println found-data)))
