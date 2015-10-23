@@ -4,7 +4,11 @@
            [de.onvif.soap.devices InitialDevices MediaDevices]
            [org.me.javawsdiscovery DeviceDiscovery]
            [java.util List])
+  (:require [monger.core :as mg])
   (:gen-class))
+
+(def mgdb-name "databaseName")
+(def table-name "tableName")
 
 (defn device-info
   "Creates a datastructure that contains device information"
@@ -48,12 +52,14 @@
       (device-info device))
     (catch Exception e nil)))
 
-(defn -main-detailed
-  "Returns a small list of information about cameras in which communication was successful."
-  [& args]
-  (let [found-addresses (into [] (discover-camera-ips)) ; Temporary ip removal. the device hangs the script. must be resolved.
-        found-info (into #{} (remove nil? (map camera-info found-addresses)))]
-    (println found-info)))
+(defn store-in-mongo
+  "Stores the given information in mongo."
+  [db-name table data]
+  (try
+    (let [conn (mg/connect)
+          db (mg/get-db conn db-name)]
+      (println :connection-established))
+    (catch Exception e (println :connection-failed))))
 
 (defn -main
   "Returns a list of URIs of devices found on the network."
@@ -61,6 +67,6 @@
   (let [uris (discover-camera-uris)
         found-data {:uris uris
                     :ips (create-ip-list uris)}]
-                    ;:ips (create-ip-list uris)
-                    ;:deep (into #{} (remove nil? (map camera-info (create-ip-list uris))))}]
-    (println found-data)))
+    (if (> (count found-data) 0)
+      (store-in-mongo mgdb-name table-name found-data)
+      (println :no-data-found))))
