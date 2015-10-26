@@ -4,12 +4,16 @@
            [de.onvif.soap.devices InitialDevices MediaDevices]
            [org.me.javawsdiscovery DeviceDiscovery]
            [java.util List])
-  (:require [monger.core :as mg])
+  (:require [monger.core :as mg]
+            [monger.collection :as mc]
+            [digest])
   (:gen-class))
 
 (def mgdb-name "databaseName")
-(def table-name "tableName")
+(def coll-name "discovered-cameras")
 
+;;; Onvif Functions
+;;; ===============
 (defn device-info
   "Creates a datastructure that contains device information"
   [onvif-device]
@@ -21,10 +25,15 @@
      :uri (.getDeviceUri onvif-device)}
     nil))
 
+(defn uri->ip
+  "Get the ip of a uri"
+  [uri]
+  (re-find #"\d+\.\d+\.\d+.\d+" uri))
+
 (defn create-ip-list
   "Converts a list of strings to a list of ip addresses"
   [strings]
-  (into [] (map #(re-find #"\d+\.\d+\.\d+\.\d+" %) strings)))
+  (into [] (map uri->ip strings)))
 
 (defn discover-camera-uris
   "Retrieves IP addresses of discovered cameras."
@@ -52,21 +61,38 @@
       (device-info device))
     (catch Exception e nil)))
 
+;;; Mongo Functions
+;;; ===============
+
 (defn store-in-mongo
   "Stores the given information in mongo."
-  [db-name table data]
+  [db-name collection data]
   (try
     (let [conn (mg/connect)
           db (mg/get-db conn db-name)]
-      (println :connection-established))
+      (mc/insert db collection data)
+      (mg/disconnect conn))
     (catch Exception e (println :connection-failed))))
+
+(defn create-db-map
+  "Creates a map that is a row in the mongo database"
+  [uri]
+  {:_id (digest/md5 uri)
+   :ip (uri->ip uri)
+   :uri uri})
+
+(defn collection
+  "Retrieve information from mongo"
+  [db-name coll-name]
+  :temp-collection)
 
 (defn -main
   "Returns a list of URIs of devices found on the network."
   [& args]
   (let [uris (discover-camera-uris)
-        found-data {:uris uris
-                    :ips (create-ip-list uris)}]
-    (if (> (count found-data) 0)
-      (store-in-mongo mgdb-name table-name found-data)
-      (println :no-data-found))))
+        ; Create a list of data to be inserted.
+        data (map create-db-map uris)]
+    (println :data)
+    (println data)))
+    ; Query mongo to display what is there already.
+    ; Insert data into mongo.
