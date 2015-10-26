@@ -9,7 +9,7 @@
             [digest])
   (:gen-class))
 
-(def mgdb-name "databaseName")
+(def mgdb-name "StreamManager")
 (def coll-name "discovered-cameras")
 
 ;;; Onvif Functions
@@ -58,21 +58,26 @@
   [ip]
   (try
     (let [device (OnvifDevice. ip)]
-      (device-info device))
-    (catch Exception e nil)))
+      (device-info device)) (catch Exception e nil)))
 
 ;;; Mongo Functions
 ;;; ===============
 
-(defn store-in-mongo
-  "Stores the given information in mongo."
-  [db-name collection data]
+(defn store
+  "Stores the given data in mongo."
+  [mgdb coll data]
   (try
-    (let [conn (mg/connect)
-          db (mg/get-db conn db-name)]
-      (mc/insert db collection data)
-      (mg/disconnect conn))
-    (catch Exception e (println :connection-failed))))
+    (do (mc/insert mgdb coll data)
+        (println "STORED!"))
+    (catch Exception e (println :connection-failed-store-in-mongo e))))
+
+(defn bulk-store
+  "Stores a vector of information in mongo."
+  [mgdb coll data-vector]
+  (try
+    (do (mc/insert-batch mgdb coll data-vector)
+        (println "Stored!"))
+    (catch Exception e (println "Store Failed:" e))))
 
 (defn create-db-map
   "Creates a map that is a row in the mongo database"
@@ -83,16 +88,41 @@
 
 (defn collection
   "Retrieve information from mongo"
-  [db-name coll-name]
-  :temp-collection)
+  [mgdb coll]
+  (try
+    (mc/find-maps mgdb coll)
+    (catch Exception e (println :connection-failed-collection))))
+
+(defn new-cameras
+  "Compares found cameras with db cameras. Returns found that arent stored."
+  [found database]
+  (loop [new-list []
+         found-list found
+         db-list database]
+    (if (empty? found-list)
+      new-list
+      (if (some #(= (:ip (first found-list)) (:ip %)) db-list)
+        (do (println (:ip (first found-list)) "has already been entered.")
+            (recur new-list (rest found-list) db-list))
+        (do (println (:ip (first found-list)) "IS NEW!")
+            (recur (into new-list [(first found-list)]) (rest found-list) db-list))))))
 
 (defn -main
   "Returns a list of URIs of devices found on the network."
   [& args]
+        ; Discover cameras on the network.
   (let [uris (discover-camera-uris)
-        ; Create a list of data to be inserted.
-        data (map create-db-map uris)]
-    (println :data)
-    (println data)))
-    ; Query mongo to display what is there already.
-    ; Insert data into mongo.
+        ; Create a vector of maps that contain :_id :ip :uri.
+        data (future (into [] (map create-db-map uris)))
+        ; Connect to mongo
+        conn (mg/connect)
+        ; Select the database we want to use.
+        db   (mg/get-db conn mgdb-name)
+        ; Retrieve all devices already stored in mongo.
+        curr (future (into [] (collection db coll-name)))
+        ; Find what devices are newly found.
+        diff (future (new-cameras @data @curr))]
+    (when (> (count @diff) 0)
+      (bulk-store db coll-name @diff))
+    (mg/disconnect conn)
+    (shutdown-agents)))
