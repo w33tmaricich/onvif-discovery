@@ -9,7 +9,7 @@
             [digest])
   (:gen-class))
 
-(def mgdb-name "StreamManager")
+(def mgdb-name "camera-detection")
 (def coll-name "discovered-cameras")
 
 ;;; Onvif Functions
