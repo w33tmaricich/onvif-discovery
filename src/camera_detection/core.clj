@@ -62,22 +62,21 @@
 
 ;;; Mongo Functions
 ;;; ===============
-
 (defn store
   "Stores the given data in mongo."
   [mgdb coll data]
   (try
     (do (mc/insert mgdb coll data)
         (println "STORED!"))
-    (catch Exception e (println :connection-failed-store-in-mongo e))))
+    (catch Exception e (println " [ err ] ---" :connection-failed-store e))))
 
 (defn bulk-store
   "Stores a vector of information in mongo."
   [mgdb coll data-vector]
   (try
     (do (mc/insert-batch mgdb coll data-vector)
-        (println "Stored!"))
-    (catch Exception e (println "Store Failed:" e))))
+        (println " [ suc ] --- Data stored successfully!"))
+    (catch Exception e (println " [ err ] ---" :failed-builk-store e))))
 
 (defn create-db-map
   "Creates a map that is a row in the mongo database"
@@ -91,7 +90,7 @@
   [mgdb coll]
   (try
     (mc/find-maps mgdb coll)
-    (catch Exception e (println :connection-failed-collection))))
+    (catch Exception e (println " [ err ] ---" :connection-failed-collection e))))
 
 (defn new-cameras
   "Compares found cameras with db cameras. Returns found that arent stored."
@@ -102,9 +101,9 @@
     (if (empty? found-list)
       new-list
       (if (some #(= (:ip (first found-list)) (:ip %)) db-list)
-        (do (println (:ip (first found-list)) "has already been entered.")
+        (do (println " [ old ] ---" (:ip (first found-list)) "has already been stored.")
             (recur new-list (rest found-list) db-list))
-        (do (println (:ip (first found-list)) "IS NEW!")
+        (do (println " [ new ] ---" (:ip (first found-list)) "is ready for storage.")
             (recur (into new-list [(first found-list)]) (rest found-list) db-list))))))
 
 (defn -main
