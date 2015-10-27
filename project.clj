@@ -1,5 +1,5 @@
-(defproject camera-detection "0.1.0"
-  :description "Discovers onvif compatable cameras."
+(defproject camera-detection "1.0.0"
+  :description "Discovers onvif compatable devices."
   :url ""
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.onvif/onvif "2015.08.14"]
