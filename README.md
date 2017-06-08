@@ -27,5 +27,4 @@ Each device has three pieces of information associated with it:
  - :uri = Uniform Resource Identifier for the stream.
 
 ## License
-Skyline Technology Solutions © 2015
-Maintainer: Alexander Maricich
+Alexander Maricich © 2015
